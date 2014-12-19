@@ -9,6 +9,7 @@
 
 // Color of targets when idle
 #define TARGET_FILL_COLOR RGBColor::Blue
+#define TARGET_FORCED_HIT_COLOR RGBColor::Yellow
 
 Brain2BrainUI::Brain2BrainUI(GUI::DisplayWindow& display) 
     : window(display), dwellTime(0) {}
@@ -114,14 +115,6 @@ void Brain2BrainUI::OnStartRun() {
     titleBox->SetText(">> Get Ready! <<");
 }
 
-void Brain2BrainUI::DoPreRun(bool showQuestion) {
-    if (showQuestion) {
-        questionBox->Show();
-    } else {
-        questionBox->Hide();
-    }
-}
-
 void Brain2BrainUI::OnFeedbackBegin() {
     GUI::Point center = {0.5f, 0.5f};
     cursor->SetCenter(center)
@@ -179,10 +172,6 @@ Brain2BrainUI::TargetHitType Brain2BrainUI::DoFeedback(const GenericSignal& Cont
 }
 
 void Brain2BrainUI::OnFeedbackEnd() {
-    // Reset the target colors
-    yesTarget->SetFillColor(TARGET_FILL_COLOR);
-    noTarget->SetFillColor(TARGET_FILL_COLOR);
-    
     cursor->Hide();
 }
 
@@ -198,6 +187,10 @@ void Brain2BrainUI::OnStopRun() {
 }
 
 void Brain2BrainUI::SetQuestion(std::string data) {
+    yesTarget->SetFillColor(TARGET_FILL_COLOR);
+    noTarget->SetFillColor(TARGET_FILL_COLOR);
+    
+    questionBox->Show();
     questionBox->SetText(data);
 }
 
@@ -212,4 +205,33 @@ void Brain2BrainUI::SetAnswer(std::string data) {
     noTarget->SetFillColor(TARGET_FILL_COLOR)
 		     .Show();
     noTargetText->Show();
+}
+
+void Brain2BrainUI::ShowQuestion() {
+    questionBox->Show();
+}
+
+void Brain2BrainUI::HideQuestion() {
+    questionBox->Hide();
+}
+
+Brain2BrainUI::TargetHitType Brain2BrainUI::GetClosestTarget() {
+    GUI::Rect cursorRect = cursor->ObjectRect();
+    GUI::Rect yesRect = yesTarget->ObjectRect();
+    GUI::Rect noRect = noTarget->ObjectRect();
+
+    float comparison = std::abs(cursorRect.left + cursorRect.right - yesRect.left - yesRect.right)
+        - std::abs(cursorRect.left + cursorRect.right - noRect.left - noRect.right);
+    
+    // Distance to the Yes target (is | is not) less than the distance to the No target at the
+    // end of the trial
+    TargetHitType targetHit = comparison < 0 ? YES_TARGET : NO_TARGET;
+
+    // Changing the color of the target that the cursor was closest to at the end of the trial
+    if (targetHit == YES_TARGET) {
+        yesTarget->SetFillColor(TARGET_FORCED_HIT_COLOR);
+    } else {
+        noTarget->SetFillColor(TARGET_FORCED_HIT_COLOR);
+    }
+    return targetHit;
 }
